@@ -1,2 +1,2 @@
 # 18aCreatePoses
-This project allows the generation of different sets of poses for Krang
+This project contains multiple scripts to generate different sets of poses to be used for data analysis.
