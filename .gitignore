@@ -7,5 +7,13 @@
 # Readme
 !README.md
 
-# Scripts
-!gen_poses.cpp
+# gen_any_poses
+!gen_any_poses/
+gen_any_poses/*
+!gen_any_poses/gen_poses.cpp
+
+# gen_opt_poses
+!gen_opt_poses/
+gen_opt_poses/*
+!gen_opt_poses/CMakeLists.txt
+!gen_opt_poses/gen_opt_poses.cpp

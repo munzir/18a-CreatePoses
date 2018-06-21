@@ -60,18 +60,25 @@
 using namespace std;
 
 int writePosesToFile();
+
 int krangHardwarePoses();
+
 int writeRandomPosesToFile(int numPoses);
 double fRand(double min, double max);
 
 int main() {
+
     //writeAllPosesToFile();
-    srand(0);
-    krangHardwarePoses();
+
+    //krangHardwarePoses();
+
+    //srand(0);
     //writeRandomPosesToFile(5000);
+
 }
 
 int krangHardwarePoses() {
+
     // Step sizes
     // Waist - 3
     // Torso - 4
@@ -91,7 +98,17 @@ int krangHardwarePoses() {
     int step[] = {3, 4, 4, 4};
 
     //Number of arm poses for each step of waist, torso, & left/right shoulders
-    int armPoses = 6;
+    int armPoses = 3;
+    double armConfig[] = {2.5,0,0,1.57,-0.785,0,-0.785,0,-0.785,0,-1.57,0.785,0,0.785,0,0.785,0,
+                            2.5,0,0,1.57,-1.57,0,0,0,0,0,0,0,0,0,0,0,0,
+                            2.5,0,0,0,0,0,1.57,0,1.57,0,-1.57,0,0,-1.57,0,-1.57,0,
+                            2,0,0,1.57,-0.785,0,-0.785,0,-0.785,0,-1.57,0.785,0,0.785,0,0.785,0,
+                            2,0,0,1.57,-1.57,0,0,0,0,0,0,0,0,0,0,0,0,
+                            2,0,0,0,0,0,1.57,0,1.57,0,-1.57,0,0,-1.57,0,-1.57,0,
+                            1.5,0,0,1.57,-0.785,0,-0.785,0,-0.785,0,-1.57,0.785,0,0.785,0,0.785,0,
+                            1,0,0,1.57,-1.57,0,0,0,0,0,0,0,0,0,0,0,0,
+                            1.5,0,0,0,0,0,1.57,0,1.57,0,-1.57,0,0,-1.57,0,-1.57,0,
+                            1.5,0,0,0,-0.785,0,-0.785,0,-0.785,0,0,0.785,0,0.785,0,0.785,0};
 
     double a = 0; //heading
     double b = 0; //qBase
@@ -103,43 +120,125 @@ int krangHardwarePoses() {
     double j = 0; //qKinect
 
     ofstream myfile;
-    myfile.open("krangHardwarePoses.txt");
+    myfile.open("2_comPoses3ArmPoses.txt");
 
     for (double h = lowerLimit[0] ; h < upperLimit[0];  h += (upperLimit[0]  - lowerLimit[0] ) / step[0] ) {
     for (double i = lowerLimit[1] ; i < upperLimit[1];  i += (upperLimit[1]  - lowerLimit[1] ) / step[1] ) {
     for (double k = lowerLimit[2] ; k < upperLimit[2];  k += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
     for (double r = lowerLimit[2] ; r < upperLimit[2];  r += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
-    for (int jj = 0; jj < armPoses; jj++) {
-        // Write the default values first
-        myfile << a << " " << b << " " << c << " " << d << " " << e << " " << f << " " << g << " ";
+    for (int armPosel = 0; armPosel < armPoses; armPosel++) {
+        for (int armPoser = 0; armPoser < armPoses; armPoser++) {
 
-        // Write waist and torso
-        myfile << h << " " << i << " ";
+            // Write the default values first
+            myfile << a << " " << b << " " << c << " " << d << " " << e << " " << f << " " << g << " ";
 
-        // Write qKinect
-        myfile << j;
+            // Write waist and torso
+            myfile << h << " " << i << " ";
 
-        // Write left arm values (shoulder first)
-        myfile << " " << k;
+            // Write qKinect
+            myfile << j;
 
-        int ii = 3;
-        //Write the rest of the values
-        for (;ii < 6+3; ii++) {
-            double ard = fRand(lowerLimit[ii], upperLimit[ii]);
-            myfile << " " << ard;
+            // Write left arm values (shoulder first)
+            myfile << " " << k;
+
+            if (armPosel == 0) {
+
+                // Write rest of left arm values
+                myfile << " -0.785 0 -0.785 0 -0.785 0";
+
+                // Write right shoulder
+                myfile << " " << r;
+
+                if (armPoser == 0) {
+
+                    // Write rest of right arm values
+                    myfile << " 0.785 0 0.785 0 0.785 0";
+
+                } else if (armPoser == 1) {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 0 0 0 0";
+
+                } else {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 -1.57 0 -1.57 0";
+
+                }
+
+            } else if (armPosel == 1) {
+                // Write rest of left arm values
+                myfile << " -1.57 0 0 0 0 0";
+
+                // Write right shoulder
+                myfile << " " << r;
+
+                if (armPoser == 0) {
+
+                    // Write rest of right arm values
+                    myfile << " 0.785 0 0.785 0 0.785 0";
+
+                } else if (armPoser == 1) {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 0 0 0 0";
+
+                } else {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 -1.57 0 -1.57 0";
+
+                }
+
+            } else {
+                // Write rest of left arm values
+                myfile << " 1.57 0 1.57 0 -1.57 0";
+
+                // Write right shoulder
+                myfile << " " << r;
+
+                if (armPoser == 0) {
+
+                    // Write rest of right arm values
+                    myfile << " 0.785 0 0.785 0 0.785 0";
+
+                } else if (armPoser == 1) {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 0 0 0 0";
+
+                } else {
+
+                    // Write rest of right arm values
+                    myfile << " 0 0 -1.57 0 -1.57 0";
+
+                }
+            }
+
+            myfile << "\n";
+
         }
 
+        // For random arm poses
+        //
+        //int ii = 3;
+        ////Write the rest of the values
+        //for (;ii < 6+3; ii++) {
+        //    double ard = fRand(lowerLimit[ii], upperLimit[ii]);
+        //    myfile << " " << ard;
+        //}
+        //
         // Write right arm values (shoulder first)
-        ii = ii + 1;
-        myfile << " " << r;
-
-        //Write the rest of the values
-        for (;ii < sizeof(lowerLimit)/sizeof(lowerLimit[0]); ii++) {
-            double ard = fRand(lowerLimit[ii], upperLimit[ii]);
-            myfile << " " << ard;
-        }
-
-        myfile << "\n";
+        //ii = ii + 1;
+        //myfile << " " << r;
+        //
+        ////Write the rest of the values
+        //for (;ii < sizeof(lowerLimit)/sizeof(lowerLimit[0]); ii++) {
+        //    double ard = fRand(lowerLimit[ii], upperLimit[ii]);
+        //    myfile << " " << ard;
+        //}
+        //
+        //myfile << "\n";
 
     }}}}}
 
