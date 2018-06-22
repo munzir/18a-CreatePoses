@@ -3,16 +3,10 @@
 // tolerance level
 
 // Output file format for fixed wheel (DART Format)
-// TODO
-// axis-angle1, axis-angle2, axis-angle3, x, y, z, qLWheel, qRWheel, qWaist, qTorso, qKinect,
-// qLArm0, ... qLArm6, qRArm0, ..., qRArm6
-// Assuming:
 // qBase, qWaist, qTorso, qKinect,
 // qLArm0, ... qLArm6, qRArm0, ..., qRArm6
 
-// TODO
-// The real xCOM for fixed wheel krang might not be getLocalCOM(0) but might be on another axis maybe
-// z (2)
+// The real xCOM for fixed wheel krang is getLocalCOM(2) z (2)
 
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
@@ -27,74 +21,57 @@ using namespace dart::math;
 
 #define MAXBUFSIZE ((int) 1e6)
 
+// Structs and functions for optimizing Fixed Wheel Krang Model
 struct comOptParams {
   SkeletonPtr robot;
-  Eigen::Matrix<double, 25, 1> qInit;
+  Eigen::Matrix<double, 18, 1> qInit;
 };
 
-// Functions for optimizing Full Krang Model
-double comOptFunc(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data) {
-  comOptParams* optParams = reinterpret_cast<comOptParams *>(my_func_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
+struct inequalityOptParams {
+    Eigen::MatrixXd P;
+    Eigen::VectorXd b;
+};
 
-  if (!grad.empty()) {
-    Eigen::Matrix<double, 25, 1> mGrad = q-optParams->qInit;
-    Eigen::VectorXd::Map(&grad[0], mGrad.size()) = mGrad;
-  }
-  return (0.5*pow((q-optParams->qInit).norm(), 2));
+//Add inequality constraints on qBase
+void constraintFunc(unsigned m, double *result, unsigned n, const double* x, double* grad, void* f_data) {
+
+    inequalityOptParams* constParams = reinterpret_cast<inequalityOptParams *>(f_data);
+    //cout << "done reading inequalityOptParams\n";
+
+    if (grad != NULL) {
+        for(int i=0; i<m; i++) {
+            for(int j=0; j<n; j++){
+                grad[i*n+j] = constParams->P(i, j);
+            }
+        }
+    }
+    //cout << "done with gradient\n";
+
+
+    Eigen::Matrix<double, 1, 1> X;
+    for(size_t i=0; i<n; i++) X(i) = x[i];
+    //cout << "done reading x\n";
+
+    Eigen::VectorXd mResult;
+    mResult = constParams->P*X - constParams->b;
+    for(size_t i=0; i<m; i++) {
+        result[i] = mResult(i);
+    }
+    //cout << "done calculating the result\n";
 }
 
-double comConstraint(const std::vector<double> &x, std::vector<double> &grad, void *com_const_data) {
-  comOptParams* optParams = reinterpret_cast<comOptParams *>(com_const_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
-  optParams->robot->setPositions(q);
-  return (pow(optParams->robot->getCOM()(0)-optParams->robot->getPosition(3), 2) \
-    + pow(optParams->robot->getCOM()(1)-optParams->robot->getPosition(4), 2));
-}
-
-double wheelAxisConstraint(const std::vector<double> &x, std::vector<double> &grad, void *wheelAxis_const_data) {
-  comOptParams* optParams = reinterpret_cast<comOptParams *>(wheelAxis_const_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
-  optParams->robot->setPositions(q);
-  return optParams->robot->getBodyNode(0)->getTransform().matrix()(2,0);
-}
-
-double headingConstraint(const std::vector<double> &x, std::vector<double> &grad, void *heading_const_data) {
-  comOptParams* optParams = reinterpret_cast<comOptParams *>(heading_const_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
-  optParams->robot->setPositions(q);
-  Eigen::Matrix<double, 4, 4> Tf = optParams->robot->getBodyNode(0)->getTransform().matrix();
-  double heading = atan2(Tf(0,0), -Tf(1,0));
-  optParams->robot->setPositions(optParams->qInit);
-  Tf = optParams->robot->getBodyNode(0)->getTransform().matrix();
-  double headingInit = atan2(Tf(0,0), -Tf(1,0));
-  return heading-headingInit;
-}
-
-// Functions for optimizing Fixed Wheel Krang Model
-// TODO: Need to change
+// Objective Function
 double comSimpleOptFunc(const std::vector<double> &x, std::vector<double> &grad, void *my_func_data) {
   comOptParams* optParams = reinterpret_cast<comOptParams *>(my_func_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
+  Eigen::Matrix<double, 1, 1> q1(x.data());
+  Eigen::Matrix<double, 18, 1> q;
+  q << q1, optParams->qInit.tail(17);
 
-  if (!grad.empty()) {
-    Eigen::Matrix<double, 25, 1> mGrad = q-optParams->qInit;
-    Eigen::VectorXd::Map(&grad[0], mGrad.size()) = mGrad;
-  }
-  return (0.5*pow((q-optParams->qInit).norm(), 2));
-}
-
-// TODO: Need to change
-double comSimpleConstraint(const std::vector<double> &x, std::vector<double> &grad, void *com_const_data) {
-  comOptParams* optParams = reinterpret_cast<comOptParams *>(com_const_data);
-  Eigen::Matrix<double, 25, 1> q(x.data());
   optParams->robot->setPositions(q);
-  return (pow(optParams->robot->getCOM()(0)-optParams->robot->getPosition(3), 2) \
-    + pow(optParams->robot->getCOM()(1)-optParams->robot->getPosition(4), 2));
+
+  return optParams->robot->getCOM()(2);
+
 }
-
-// TODO: Need to add range bounds on qBase
-
 
 int randomSimpleOptPosesToFile(int numPoses);
 double fRand(double min, double max);
@@ -114,13 +91,13 @@ int main() {
 int randomSimpleOptPosesToFile(int numPoses) {
 
     ofstream toleranceSimpleBalancedPosesFile;
-    std::string nameP = "simpleRandomOptPoses";
-    std::string ext = ".txt";
-    toleranceSimpleBalancedPosesFile.open(nameP + std::to_string(numPoses) + ext);
+    string nameP = "simpleRandomOptPoses";
+    string ext = ".txt";
+    toleranceSimpleBalancedPosesFile.open(nameP + to_string(numPoses) + ext);
 
     ofstream xCOMValuesFile;
-    std::string nameX = "simpleOptXCOMValues";
-    xCOMValuesFile.open(nameX + std::to_string(numPoses) + ext);
+    string nameX = "simpleOptXCOMValues";
+    xCOMValuesFile.open(nameX + to_string(numPoses) + ext);
 
     double g = 0; //qBase
     double j = 0; //qKinect
@@ -137,10 +114,6 @@ int randomSimpleOptPosesToFile(int numPoses) {
     dart::utils::DartLoader loader;
     // INPUT on below line (absolute path of the Krang URDF file)
     dart::dynamics::SkeletonPtr fixedWheelKrang = loader.parseSkeleton("/home/apatel435/Desktop/09-URDF/KrangFixedWheels/krang_fixed_wheel.urdf");
-
-    //TODO: Need to figure out the format of the URDF file so that I can create
-    //an appropriate vector (Assuming format as shown in the beginning of the
-    //file)
 
     cout << "Creating and writing balanced poses ...\n";
 
@@ -176,27 +149,42 @@ int randomSimpleOptPosesToFile(int numPoses) {
 
         }
 
-        // Run it through opt
+        // Run random pose through opt
         //
         const int dof = (const int) fixedWheelKrang->getNumDofs();
         comOptParams optParams;
         optParams.robot = fixedWheelKrang;
 
-        // Getting Eigen::Matrix dimensionality error here
         optParams.qInit << randomPoseParams;
         // The specific algorithm to use (COBYLA: Constrained Optimization BY
         // Linear Approximations
-        nlopt::opt opt(nlopt::LN_COBYLA, dof);
-        std::vector<double> unoptDartPoseParams(dof);
+        nlopt::opt opt(nlopt::LN_COBYLA, 1);
+        vector<double> unoptDartPoseParams(1);
         double minf;
 
-        //TODO: Need to edit the comSimpleOptFunc
+        // Minimize the objective function
         opt.set_min_objective(comSimpleOptFunc, &optParams);
 
-        //TODO: Need to edit the xCOM constraint equal to zero
-        opt.add_equality_constraint(comSimpleConstraint, &optParams, 1e-8);
+        // Add the inequality constraint on qBase
+        const vector<double> inequalityconstraintTol(2, 1e-3);
+        inequalityOptParams inequalityconstraintParams;
 
-        //TODO: Need to add the range bounds on qBase
+        // Set P and b vectors
+        // A way to represent the inequality constraint where qBase should be
+        // between -pi/2 and pi/2 so that our COM is above the wheel not below
+        // it
+        Eigen::MatrixXd setP(2,1);
+        Eigen::MatrixXd setb(2,1);
+
+        setP(0,0) = 1;
+        setP(1,0) = -1;
+        setb(0,0) = M_PI/2;
+        setb(1,0) = M_PI/2;
+
+        inequalityconstraintParams.P = setP;
+        inequalityconstraintParams.b = setb;
+
+        opt.add_inequality_mconstraint(constraintFunc, &inequalityconstraintParams, inequalityconstraintTol);
 
         //Set relative tolerance on opt params
         opt.set_xtol_rel(1e-4);
@@ -204,7 +192,9 @@ int randomSimpleOptPosesToFile(int numPoses) {
         opt.set_maxtime(10);
 
         try {
+
             opt.optimize(unoptDartPoseParams, minf);
+
             Eigen::Matrix<double, 18, 1> optDartPoseParams(unoptDartPoseParams.data());
             // Set position of ideal robot to the pose in DART format
             fixedWheelKrang->setPositions(optDartPoseParams);
@@ -212,7 +202,7 @@ int randomSimpleOptPosesToFile(int numPoses) {
             // Print the optDartPoseParams that obey the tolerance level specified
 
             // Get x center of mass
-            double xCOMFixedWheelKrang = fixedWheelKrang->getCOM()(0);
+            double xCOMFixedWheelKrang = fixedWheelKrang->getCOM()(2);
 
             // If it passes the tolerance check then print it to file and increment pose
             // counter
@@ -225,7 +215,7 @@ int randomSimpleOptPosesToFile(int numPoses) {
             xCOMValuesFile << xCOMFixedWheelKrang << "\n";
             pose++;
             //}
-        } catch(std::exception &e) {
+        } catch(exception &e) {
         }
 
     }

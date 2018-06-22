@@ -83,6 +83,7 @@ int main() {
 
     //Efficiency rate seems to be 75:1
     // 5000:66
+    // 10000 Poses took 5 hrs and 5 mins for 0.001 tolerance level
     writeRandomOptPosesToFile(numPoses, tolerance);
 }
 
