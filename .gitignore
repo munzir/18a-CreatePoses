@@ -7,6 +7,8 @@
 # Readme
 !README.md
 
+# Datasets
+
 # gen_any_poses
 !gen_any_poses/
 gen_any_poses/*
@@ -17,3 +19,9 @@ gen_any_poses/*
 gen_opt_poses/*
 !gen_opt_poses/CMakeLists.txt
 !gen_opt_poses/gen_opt_poses.cpp
+
+# gen_simple_opt_poses
+!gen_simple_opt_poses/
+gen_simple_opt_poses/*
+!gen_simple_opt_poses/CMakeLists.txt
+!gen_simple_opt_poses/gen_simple_opt_poses.cpp

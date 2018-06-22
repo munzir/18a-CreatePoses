@@ -72,8 +72,8 @@ int main() {
 
     //krangHardwarePoses();
 
-    //srand(0);
-    //writeRandomPosesToFile(5000);
+    srand(0);
+    writeRandomPosesToFile(5000);
 
 }
 
