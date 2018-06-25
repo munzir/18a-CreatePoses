@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 
-project(gen_opt_poses)
+project(gen_poses)
 
 find_package(DART 6 REQUIRED COMPONENTS utils-urdf)
 
