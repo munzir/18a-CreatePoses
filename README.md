@@ -20,7 +20,7 @@ TODO
 
 3: Run the project
 
-    ./gen\_poses.cpp
+    ./gen_poses.cpp
 
 ## convert\_pose\_format
 A script that converts between Munzir's and DART's coordinates.
