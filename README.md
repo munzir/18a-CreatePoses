@@ -22,7 +22,7 @@ check for collisions. Can also filter existing pose sets.
 
     ./gen_poses.cpp
 
-## convert\_pose\_format
+## convert\_pose\_formats
 A script that converts between Munzir's and DART's coordinates.
 
 ### Dependencies
