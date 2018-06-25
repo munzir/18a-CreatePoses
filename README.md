@@ -7,7 +7,8 @@ check for collisions. Can also filter existing pose sets.
 
 ### Dependencies
 - DART (at lease version 6)
- [Dart Homepage] = (https://dartsim.github.io)
+
+   [Dart Homepage](https://dartsim.github.io)
 
 ### Build and Run
 1: Enter the gen\_poses directory
