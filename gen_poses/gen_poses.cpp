@@ -162,7 +162,8 @@ int main() {
     // Default genMethod = random
 
     //INPUT on below line (tolerance level (in meters) for xCOM value from opt code)
-    double tolerance = 0.100;
+    double tolerance = defTolerance;
+    //double tolerance = 0.001;
 
     //INPUT on below line (number of poses to generate)
     int numPoses = 1000;
@@ -183,11 +184,11 @@ int main() {
     int lineToSkip = 1;
 
     //INPUT on below lilne (balancing method)
-    string balMethod = "none";
+    string balMethod = "full";
     // Options: none, full, fixedwheel
 
     //INPUT on below line (generation method)
-    string genMethod = "random";
+    string genMethod = "custom2com";
     // Options: custom2com, step, filter, random
 
     //INPUT on below line (full robot path)
