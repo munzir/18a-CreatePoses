@@ -19,6 +19,7 @@ using namespace std;
 using namespace dart::common;
 using namespace dart::dynamics;
 using namespace dart::math;
+using namespace dart::utils;
 
 // Defines
 #define MAXBUFSIZE ((int) 1e6)
@@ -162,11 +163,11 @@ int main() {
     // Default genMethod = random
 
     //INPUT on below line (tolerance level (in meters) for xCOM value from opt code)
-    double tolerance = defTolerance;
-    //double tolerance = 0.001;
+    //double tolerance = defTolerance;
+    double tolerance = 0.001;
 
     //INPUT on below line (number of poses to generate)
-    int numPoses = 1000;
+    int numPoses = 500;
 
     //INPUT on below line (check for collision)
     bool collisionCheck = false;
@@ -188,7 +189,7 @@ int main() {
     // Options: none, full, fixedwheel
 
     //INPUT on below line (generation method)
-    string genMethod = "custom2com";
+    string genMethod = "random";
     // Options: custom2com, step, filter, random
 
     //INPUT on below line (full robot path)
@@ -332,7 +333,7 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
     double k = 0; //qKinect
 
     // Instantiate full robot
-    dart::utils::DartLoader loader;
+    DartLoader loader;
     SkeletonPtr fullRobot = loader.parseSkeleton(fullRobotPath);
 
     SkeletonPtr fixedWheelRobot;
@@ -461,7 +462,7 @@ Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen:
     Eigen::MatrixXd stepPoseParams(25, 1);
 
     // Instantiate full robot
-    dart::utils::DartLoader loader;
+    DartLoader loader;
     SkeletonPtr fullRobot = loader.parseSkeleton(fullRobotPath);
 
     SkeletonPtr fixedWheelRobot;
@@ -556,7 +557,7 @@ Eigen::MatrixXd genFilterPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
     int numInputPoses = unfilteredPoses.rows();
 
     // Instantiate full robot
-    dart::utils::DartLoader loader;
+    DartLoader loader;
     SkeletonPtr fullRobot = loader.parseSkeleton(fullRobotPath);
 
     SkeletonPtr fixedWheelRobot;
@@ -638,7 +639,7 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
     double k = 0; //qKinect
 
     // Instantiate full robot
-    dart::utils::DartLoader loader;
+    DartLoader loader;
     SkeletonPtr fullRobot = loader.parseSkeleton(fullRobotPath);
 
     SkeletonPtr fixedWheelRobot;

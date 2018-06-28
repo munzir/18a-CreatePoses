@@ -175,7 +175,7 @@ Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose) {
     Eigen::AngleAxisd aa(baseTf.matrix().block<3,3>(0,0));
 
     // Now compile this data into dartPoseParams
-    Eigen::Matrix<double, 23, 1> munzirPose;
+    Eigen::Matrix<double, 24, 1> munzirPose;
     munzirPose << headingInit, qBaseInit, unchangedValues;
 
     return munzirPose;
