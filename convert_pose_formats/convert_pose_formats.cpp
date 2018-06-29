@@ -116,8 +116,6 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string 
             convertedPose = munzirToDart(inputPoses.col(poseCounter));
         }
 
-        poseCounter++;
-
         convertedPose.transposeInPlace();
 
         Eigen::MatrixXd tmp(outputPoses.rows()+convertedPose.rows(), convertedPose.cols());
@@ -129,7 +127,7 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string 
                    convertedPose;
         }
         outputPoses = tmp;
-        cout << "\rPose: " << poseCounter;
+        cout << "\rPose: " << ++poseCounter;
 
     }
 
@@ -162,9 +160,6 @@ Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose) {
 
 Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose, SkeletonPtr robot) {
     // Find the pose in munzir format
-    double aa1 = dartPose(0);
-    double aa2 = dartPose(1);
-    double aa3 = dartPose(2);
     Eigen::Matrix<double, 22, 1> unchangedValues;
     unchangedValues << dartPose.segment(3,22).transpose();
 
