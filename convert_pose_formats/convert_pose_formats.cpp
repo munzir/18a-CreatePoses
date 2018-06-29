@@ -11,23 +11,26 @@
 
 // Includes
 #include <dart/dart.hpp>
+#include <dart/utils/urdf/urdf.hpp>
 #include <iostream>
 #include <fstream>
 
 // Namespaces
 using namespace std;
 using namespace dart::common;
+using namespace dart::dynamics;
 using namespace dart::math;
+using namespace dart::utils;
 
 // Defines
 #define MAXBUFSIZE ((int) 1e6)
 
 // Function Prototypes
-Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPosesFilename);
+Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPosesFilename, string fullRobotPath);
 
 // // Conversions
 Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose);
-Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose);
+Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose, SkeletonPtr robot);
 
 // // Read file as matrix
 Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename);
@@ -36,33 +39,27 @@ Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename);
 string extractFilename(string filename);
 
 // Main Function
-// TODO command line arguments
 int main() {
     // TODO: Command line flags and arguments
 
     //INPUT on below line (output format)
-    string convert = "munzir2dart";
+    string convert = "dart2munzir";
     // Options: dart2munzir, munzir2dart
 
     //INPUT on below line (input file to convert)
-    string inputPosesFilename = "../randomPoses5000.txt";
+    //string inputPosesFilename = "../randomPoses5000.txt";
+    string inputPosesFilename = "./randomPoses5000dart.txt";
 
     //INPUT on below line (full robot path)
     string fullRobotPath = "/home/apatel435/Desktop/09-URDF/Krang/Krang.urdf";
 
-    //INPUT on below line (fixed wheel robot path)
-    string fixedWheelRobotPath = "/home/apatel435/Desktop/09-URDF/KrangFixedWheels/krang_fixed_wheel.urdf";
-
     // Read input file
-    Eigen::MatrixXd inputPoses;
-    inputPoses = readInputFileAsMatrix(inputPosesFilename);
+    Eigen::MatrixXd inputPoses = readInputFileAsMatrix(inputPosesFilename);
 
     // Generate output
-    Eigen::MatrixXd outputPoses;
-
     cout << "Converting Poses ...\n";
 
-    outputPoses = convertPoses(convert, inputPoses);
+    Eigen::MatrixXd outputPoses = convertPoses(convert, inputPoses, fullRobotPath);
 
     cout << "|-> Done\n";
 
@@ -91,7 +88,7 @@ int main() {
 }
 
 // Functions
-Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses) {
+Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string fullRobotPath) {
     Eigen::MatrixXd outputPoses;
 
     // Tranpose big matrix first
@@ -101,16 +98,25 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses) {
     int numInputPoses = inputPoses.cols();
     Eigen::MatrixXd convertedPose;
 
+    DartLoader loader;
+    SkeletonPtr robot;
+
+    if (convert == "dart2munzir") {
+        robot = loader.parseSkeleton(fullRobotPath);
+    }
+
     int poseCounter = 0;
     cout << "Pose: " << poseCounter;
+
     while (poseCounter < numInputPoses) {
 
         if (convert == "dart2munzir") {
-            convertedPose = dartToMunzir(inputPoses.col(poseCounter));
+            convertedPose = dartToMunzir(inputPoses.col(poseCounter), robot);
         } else {
             convertedPose = munzirToDart(inputPoses.col(poseCounter));
-
         }
+
+        poseCounter++;
 
         convertedPose.transposeInPlace();
 
@@ -123,7 +129,7 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses) {
                    convertedPose;
         }
         outputPoses = tmp;
-        cout << "\rPose: " << ++poseCounter;
+        cout << "\rPose: " << poseCounter;
 
     }
 
@@ -154,27 +160,24 @@ Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose) {
     return dartPose;
 }
 
-//TODO: Need to fix
-Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose) {
+Eigen::MatrixXd dartToMunzir(Eigen::RowVectorXd dartPose, SkeletonPtr robot) {
     // Find the pose in munzir format
-    double aa1Init = dartPose(0);
-    double aa2Init = dartPose(1);
-    double aa3Init = dartPose(2);
+    double aa1 = dartPose(0);
+    double aa2 = dartPose(1);
+    double aa3 = dartPose(2);
     Eigen::Matrix<double, 22, 1> unchangedValues;
     unchangedValues << dartPose.segment(3,22).transpose();
 
     // Calculating the headingInit and qBase Init from the axis angle representation of orientation:
-    // TODO
-    double headingInit = 0;
-    double qBaseInit = 0;
+    robot->setPositions(dartPose);
+    Eigen::MatrixXd baseTf = robot->getBodyNode(0)->getTransform().matrix();
+    double headingInit = atan2(baseTf(0, 0), -baseTf(1, 0));
+    double qBaseInit = atan2(baseTf(0,1)*cos(headingInit) + baseTf(1,1)*sin(headingInit), baseTf(2,1));
+    // I thought the below would work but its not qbase is off by 1.57 rads (90
+    // degs) the above expression for qBaseInit fixes that
+    //double qBaseInit = atan2(baseTf(2,1), baseTf(2,2));
 
-    // Inverse of this basically
-    // RotX(pi/2)*RotY(-pi/2+headingInit)*RotX(-qBaseInit)
-    Eigen::Transform<double, 3, Eigen::Affine> baseTf = Eigen::Transform<double, 3, Eigen::Affine>::Identity();
-    baseTf.prerotate(Eigen::AngleAxisd(-qBaseInit,Eigen::Vector3d::UnitX())).prerotate(Eigen::AngleAxisd(-M_PI/2+headingInit,Eigen::Vector3d::UnitY())).prerotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitX()));
-    Eigen::AngleAxisd aa(baseTf.matrix().block<3,3>(0,0));
-
-    // Now compile this data into dartPoseParams
+    // Now compile this data into munzir pose
     Eigen::Matrix<double, 24, 1> munzirPose;
     munzirPose << headingInit, qBaseInit, unchangedValues;
 

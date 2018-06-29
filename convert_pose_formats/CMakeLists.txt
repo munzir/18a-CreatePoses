@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 
 project(convert_pose_formats)
 
-#find_package(DART 6 REQUIRED COMPONENTS utils-urdf)
-find_package(DART 6)
+find_package(DART 6 REQUIRED COMPONENTS utils-urdf)
 
 add_compile_options(-std=c++11)
 
