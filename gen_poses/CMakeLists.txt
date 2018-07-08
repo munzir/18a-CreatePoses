@@ -8,7 +8,8 @@ add_compile_options(-std=c++11)
 
 include_directories(${DART_INCLUDE_DIRS})
 
-file(GLOB srcs "*.cpp" "*.hpp")
+#file(GLOB srcs "balance_collision.cpp" "gen_poses.cpp")
+file(GLOB srcs "gen_poses.cpp" "balance_collision.cpp" "balance_collision.hpp")
 add_executable(${PROJECT_NAME} ${srcs})
 
 target_link_libraries(${PROJECT_NAME} ${DART_LIBRARIES} nlopt)

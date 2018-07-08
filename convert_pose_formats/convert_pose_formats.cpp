@@ -4,7 +4,7 @@
 // Munizr Coordinate Format
 // heading, qBase, x, y, z, qLWheel, qRWheel, qWaist, qTorso, qKinect,
 // qLArm0, ... qLArm6, qRArm0, ..., qRArm6
-//
+
 // DART Coordinate format
 // axis-angle1, axis-angle2, axis-angle3, x, y, z, qLWheel, qRWheel, qWaist, qTorso, qKinect,
 // qLArm0, ... qLArm6, qRArm0, ..., qRArm6
@@ -51,16 +51,22 @@ int main() {
     string inputPosesFilename = "./randomPoses5000dart.txt";
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/09-URDF/Krang/Krang.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
 
     // Read input file
-    Eigen::MatrixXd inputPoses = readInputFileAsMatrix(inputPosesFilename);
+    Eigen::MatrixXd inputPoses;
+    try {
+        cout << "Reading input poses ...\n";
+        inputPoses = readInputFileAsMatrix(inputPosesFilename);
+        cout << "|-> Done\n";
+    } catch (exception& e) {
+        cout << e.what() << endl;
+        return EXIT_FAILURE;
+    }
 
     // Generate output
     cout << "Converting Poses ...\n";
-
     Eigen::MatrixXd outputPoses = convertPoses(convert, inputPoses, fullRobotPath);
-
     cout << "|-> Done\n";
 
     // Name output file
@@ -75,35 +81,40 @@ int main() {
     string ext = ".txt";
     outfilename = inputName + outputFormat + ext;
 
-    // Write outputPoses to file
+    // Writing to file
     cout << "Writing Poses to " << outfilename << " ...\n";
-
     ofstream outfile;
     outfile.open(outfilename);
     outfile << outputPoses;
     outfile.close();
-
     cout << "|-> Done\n";
 
+    return 0;
 }
 
 // Functions
 Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string fullRobotPath) {
-    Eigen::MatrixXd outputPoses;
+    int numInputPoses = inputPoses.rows();
+    int outputCols;
 
-    // Tranpose big matrix first
-    // Cols are now poses, and rows are now params
-    inputPoses.transposeInPlace();
-
-    int numInputPoses = inputPoses.cols();
-    Eigen::MatrixXd convertedPose;
-
+    // Robot used to find transform matrix
     DartLoader loader;
     SkeletonPtr robot;
 
     if (convert == "dart2munzir") {
         robot = loader.parseSkeleton(fullRobotPath);
+        outputCols = inputPoses.cols() - 1;
+    } else {
+        outputCols = inputPoses.cols() + 1;
     }
+
+    Eigen::MatrixXd outputPoses(numInputPoses, outputCols);
+
+    // Tranpose big matrix first
+    // Cols are now poses, and rows are now params
+    inputPoses.transposeInPlace();
+
+    Eigen::MatrixXd convertedPose;
 
     int poseCounter = 0;
     cout << "Pose: " << poseCounter;
@@ -117,22 +128,13 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string 
         }
 
         convertedPose.transposeInPlace();
+        outputPoses.row(poseCounter) = convertedPose;
 
-        Eigen::MatrixXd tmp(outputPoses.rows()+convertedPose.rows(), convertedPose.cols());
-
-        if (outputPoses.rows() == 0) {
-            tmp << convertedPose;
-        } else {
-            tmp << outputPoses,
-                   convertedPose;
-        }
-        outputPoses = tmp;
         cout << "\rPose: " << ++poseCounter;
 
     }
 
     cout << endl;
-
     return outputPoses;
 }
 
@@ -185,7 +187,9 @@ Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename) {
     ifstream infile;
     infile.open(inputPosesFilename);
 
-    cout << "Reading input poses ...\n";
+    if (!infile.is_open()) {
+        throw runtime_error(inputPosesFilename + " can not be read, potentially does not exit!");
+    }
 
     int cols = 0, rows = 0;
     double buff[MAXBUFSIZE];
@@ -209,8 +213,6 @@ Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename) {
 
     infile.close();
     rows--;
-
-    cout << "|-> Done\n";
 
     // Populate matrix with numbers.
     Eigen::MatrixXd outputMatrix(rows, cols);
