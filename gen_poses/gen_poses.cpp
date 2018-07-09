@@ -72,13 +72,13 @@ int main() {
     srand(time(0));
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangVisualCollision.urdf";
 
     //INPUT on below line (fixed wheel robot path)
     string fixedWheelRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/KrangFixedWheels/krang_fixed_wheel.urdf";
 
     //INPUT on below line (generation method)
-    string genMethod = "random";
+    string genMethod = "custom2com";
     // Options: custom2com, step, filter, random
 
     //INPUT on below lilne (balancing method)
