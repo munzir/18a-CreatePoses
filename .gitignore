@@ -7,16 +7,19 @@
 # Readme
 !README.md
 
-# Datasets
-
 # gen_poses
 !gen_poses/
 gen_poses/*
 !gen_poses/CMakeLists.txt
 !gen_poses/gen_poses.cpp
+!gen_poses/balance_collision.cpp
+!gen_poses/balance_collision.hpp
 
 # convert_pose_formats
 !convert_pose_formats/
 convert_pose_formats/*
 !convert_pose_formats/CMakeLists.txt
 !convert_pose_formats/convert_pose_formats.cpp
+
+# Datasets
+

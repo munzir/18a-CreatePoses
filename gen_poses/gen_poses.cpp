@@ -70,15 +70,16 @@ int main() {
 
     // Set random seed
     srand(time(0));
+    //srand(0);
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangVisualCollision.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
 
     //INPUT on below line (fixed wheel robot path)
     string fixedWheelRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/KrangFixedWheels/krang_fixed_wheel.urdf";
 
     //INPUT on below line (generation method)
-    string genMethod = "custom2com";
+    string genMethod = "random";
     // Options: custom2com, step, filter, random
 
     //INPUT on below lilne (balancing method)
@@ -108,7 +109,7 @@ int main() {
 
     //Random Only
     //INPUT on below line (number of poses to generate)
-    int numPoses = 5;
+    int numPoses = 2002;
 
     // Name output file
     string outfilename;
