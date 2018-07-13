@@ -40,6 +40,8 @@ Eigen::MatrixXd doNotBalancePose(SkeletonPtr robot, Eigen::MatrixXd unBalPose);
 // // Eliminate balancing artifacts in final pose (i.e. nonzero values that do
 // not effect the xCOM value
 Eigen::MatrixXd resetZeroParams(Eigen::MatrixXd inputPose, SkeletonPtr robot);
+// // Flip qBase if needed (balancing may give good results but flipped by 2*pi)
+Eigen::MatrixXd resetQBase(Eigen::MatrixXd inputPose, SkeletonPtr robot);
 
 // // Collision Checking Methods
 bool inFirstParentJointLimits(Eigen::MatrixXd inputPose, SkeletonPtr robot);

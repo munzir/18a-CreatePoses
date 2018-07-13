@@ -135,6 +135,9 @@ Eigen::MatrixXd balanceAndCollision(Eigen::MatrixXd inputPose, SkeletonPtr fullR
     // Reset zero quantities that do no effect balancing (xCOM of robot)
     balPoseParams = resetZeroParams(balPoseParams, fullRobot);
 
+    // If qBase is flipped, flip it back to positive angle (2*pi rotation)
+    balPoseParams = resetQBase(balPoseParams, fullRobot);
+
     // Check for first parent joint constraints throw exception if fails
     if (!inFirstParentJointLimits(balPoseParams, fullRobot)) {
         throw runtime_error("Pose violates first parent joint limits!");
@@ -296,6 +299,33 @@ Eigen::MatrixXd resetZeroParams(Eigen::MatrixXd inputPose, SkeletonPtr robot) {
     inputPose(5, 0) = f;
     inputPose(6, 0) = g;
     inputPose(7, 0) = h;
+
+    return inputPose;
+}
+
+// // Flip qBase if required
+Eigen::MatrixXd resetQBase(Eigen::MatrixXd inputPose, SkeletonPtr robot) {
+    // Check for base angle constraint (has to be b/t -pi/2 and pi/2)
+    Eigen::MatrixXd robotBaseTf = robot->getBodyNode(0)->getTransform().matrix();
+    double heading = atan2(robotBaseTf(0, 0), -robotBaseTf(1, 0));
+    double qBase = atan2(robotBaseTf(0,1)*cos(heading) + robotBaseTf(1,1)*sin(heading), robotBaseTf(2,1));
+
+    if (qBase < 0) {
+        qBase += M_PI;
+    } else if (qBase > M_PI) {
+        qBase -= M_PI;
+    }
+
+    // Calculating the axis angle representation of orientation from headingInit and qBaseInit:
+    // RotX(pi/2)*RotY(-pi/2+headingInit)*RotX(-qBaseInit)
+    Eigen::Transform<double, 3, Eigen::Affine> baseTf = Eigen::Transform<double, 3, Eigen::Affine>::Identity();
+    baseTf.prerotate(Eigen::AngleAxisd(-qBase,Eigen::Vector3d::UnitX())).prerotate(Eigen::AngleAxisd(-M_PI/2+heading,Eigen::Vector3d::UnitY())).prerotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitX()));
+    Eigen::AngleAxisd aa(baseTf.matrix().block<3,3>(0,0));
+
+    Eigen::MatrixXd aaAngleAxis = aa.angle()*aa.axis();
+    inputPose(0, 0) = aaAngleAxis(0, 0);
+    inputPose(1, 0) = aaAngleAxis(1, 0);
+    inputPose(2, 0) = aaAngleAxis(2, 0);
 
     return inputPose;
 }
