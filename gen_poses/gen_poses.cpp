@@ -109,7 +109,7 @@ int main() {
 
     //Random Only
     //INPUT on below line (number of poses to generate)
-    int numPoses = 2003;
+    int numPoses = 2000;
     //int numPoses = 50;
 
     // Name output file
