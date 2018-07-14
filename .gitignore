@@ -30,3 +30,4 @@ gen_poses/build/*
 !gen_poses/build/random2300fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2400fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2500fullbalance0.001000tolsafe.txt
+!gen_poses/build/random2600fullbalance0.001000tolsafe.txt
