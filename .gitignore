@@ -25,9 +25,13 @@ convert_pose_formats/*
 !gen_poses/build/
 gen_poses/build/*
 !gen_poses/build/random2000fullbalance0.001000tolsafe.txt
+!gen_poses/build/random2001fullbalance0.001000tolsafe.txt
+!gen_poses/build/random2002fullbalance0.001000tolsafe.txt
+!gen_poses/build/random2003fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2100fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2200fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2300fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2400fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2500fullbalance0.001000tolsafe.txt
 !gen_poses/build/random2600fullbalance0.001000tolsafe.txt
+!gen_poses/build/random6003fullbalance0.001000tolsafe.txt
