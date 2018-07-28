@@ -43,12 +43,13 @@ int main() {
     // TODO: Command line flags and arguments
 
     //INPUT on below line (output format)
-    string convert = "dart2munzir";
+    //string convert = "dart2munzir";
+    string convert = "munzir2dart";
     // Options: dart2munzir, munzir2dart
 
     //INPUT on below line (input file to convert)
     //string inputPosesFilename = "../randomPoses5000.txt";
-    string inputPosesFilename = "./randomPoses5000dart.txt";
+    string inputPosesFilename = "balancedPosesmunzir.txt";
 
     //INPUT on below line (full robot path)
     string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
@@ -126,6 +127,7 @@ Eigen::MatrixXd convertPoses(string convert, Eigen::MatrixXd inputPoses, string 
         } else {
             convertedPose = munzirToDart(inputPoses.col(poseCounter));
         }
+
 
         convertedPose.transposeInPlace();
         outputPoses.row(poseCounter) = convertedPose;
