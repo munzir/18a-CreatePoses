@@ -21,6 +21,12 @@ convert_pose_formats/*
 !convert_pose_formats/CMakeLists.txt
 !convert_pose_formats/convert_pose_formats.cpp
 
+# reorient_poses
+!reorient_poses/
+reorient_poses/*
+!reorient_poses/CMakeLists.txt
+!reorient_poses/reorient_poses.cpp
+
 # Datasets
 !gen_poses/build/
 gen_poses/build/*
