@@ -27,10 +27,13 @@ using namespace dart::utils;
 #define MAXBUFSIZE ((int) 1e6)
 
 // Function Prototypes
-Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPath);
+Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPath, string reorientOption);
 
 // // Reorient a single pose
 Eigen::MatrixXd reorientSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr robot);
+
+// // Reorient a single pose
+Eigen::MatrixXd reorientHeadingSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr robot);
 
 // // Convert from munzir format back to dart format
 Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose);
@@ -47,10 +50,14 @@ int main() {
 
     //INPUT on below line (input file to convert)
     //string inputPosesFilename = "../randomPoses5000.txt";
-    string inputPosesFilename = "../finalSetDart.txt";
+    string inputPosesFilename = "../finalSet.txt";
 
     //INPUT on below line (full robot path)
     string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
+
+    //INPUT on below line (reorientation option)
+    string reorientOption = "heading";
+    // options: all, heading
 
     // Read input file
     Eigen::MatrixXd inputPoses;
@@ -65,7 +72,7 @@ int main() {
 
     // Generate output
     cout << "Reorienting Poses ...\n";
-    Eigen::MatrixXd outputPoses = reorientAllPoses(inputPoses, fullRobotPath);
+    Eigen::MatrixXd outputPoses = reorientAllPoses(inputPoses, fullRobotPath, reorientOption);
     cout << "|-> Done\n";
 
     // Name output file
@@ -88,7 +95,7 @@ int main() {
 }
 
 // Functions
-Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPath) {
+Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPath, string reorientOption) {
     int numInputPoses = inputPoses.rows();
     int outputCols = inputPoses.cols();
 
@@ -109,7 +116,11 @@ Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPat
 
     while (poseCounter < numInputPoses) {
 
-        reorientedPose = reorientSinglePose(inputPoses.col(poseCounter), robot);
+        if (reorientOption == "heading") {
+            reorientedPose = reorientHeadingSinglePose(inputPoses.col(poseCounter), robot);
+        } else {
+            reorientedPose = reorientSinglePose(inputPoses.col(poseCounter), robot);
+        }
 
         reorientedPose.transposeInPlace();
         outputPoses.row(poseCounter) = reorientedPose;
@@ -143,6 +154,31 @@ Eigen::MatrixXd reorientSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr rob
     // Shift z-coordinate by +0.264 to account the distance from center of wheel
     // to the bottom wheel
     unchangedValues(2) = 0.264;
+
+    // Now compile this data back into dart format
+    Eigen::Matrix<double, 24, 1> munzirPose;
+    munzirPose << headingInit, qBaseInit, unchangedValues;
+
+    Eigen::MatrixXd reorientedPose = munzirToDart(munzirPose);
+    return reorientedPose;
+}
+
+Eigen::MatrixXd reorientHeadingSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr robot) {
+    // Find the pose in munzir format
+    Eigen::Matrix<double, 22, 1> unchangedValues;
+    unchangedValues << inputPose.segment(3,22).transpose();
+
+    // Calculating the headingInit and qBase Init from the axis angle representation of orientation:
+    robot->setPositions(inputPose);
+    Eigen::MatrixXd baseTf = robot->getBodyNode(0)->getTransform().matrix();
+    double headingInit = atan2(baseTf(0, 0), -baseTf(1, 0));
+    double qBaseInit = atan2(baseTf(0,1)*cos(headingInit) + baseTf(1,1)*sin(headingInit), baseTf(2,1));
+    // I thought the below would work but its not qbase is off by 1.57 rads (90
+    // degs) the above expression for qBaseInit fixes that
+    //double qBaseInit = atan2(baseTf(2,1), baseTf(2,2));
+
+    // Need to make sure heading is 0
+    headingInit = 0;
 
     // Now compile this data back into dart format
     Eigen::Matrix<double, 24, 1> munzirPose;
