@@ -2,8 +2,8 @@
 // Purpose: To generate a set of poses (balanced/collision free) in which the xCOM is within a certain
 // tolerance level
 
-// Input and Output file format (DART Style)
-// axis-angle1, axis-angle2, axis-angle3, x, y, z, qLWheel, qRWheel, qWaist, qTorso, qKinect,
+// Input and Output file format (Munzir Style)
+// heading, qBase, x, y, z, qLWheel, qRWheel, qWaist, qTorso,
 // qLArm0, ... qLArm6, qRArm0, ..., qRArm6
 // Use alphabet scheme to identify them as variables in order
 
@@ -11,9 +11,11 @@
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
 #include <nlopt.hpp>
-#include <iostream>
-#include <fstream>
+
 #include "balance_collision.hpp"
+#include "../../18h-Util/convert_pose_formats.hpp"
+#include "../../18h-Util/file_ops.hpp"
+#include "../../18h-Util/random.hpp"
 
 // Namespaces
 using namespace std;
@@ -21,9 +23,6 @@ using namespace dart::common;
 using namespace dart::dynamics;
 using namespace dart::math;
 using namespace dart::utils;
-
-// Defines
-#define MAXBUFSIZE ((int) 1e6)
 
 // Global Variables
 double pi = M_PI;
@@ -41,8 +40,11 @@ double upperLimit[] = {2.88, 1.57, pi, bendLimit, pi, bendLimit, pi, bendLimit, 
 // Function Prototypes
 // // Generation Methods
 Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath);
+
 Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath, string inputVectorsFilename);
+
 Eigen::MatrixXd genFilterPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath, string inputPosesFilename, int stopCount, int lineToSkip);
+
 Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath, int numPoses);
 
 // // Read file for step/limit vectors
@@ -51,15 +53,11 @@ Eigen::MatrixXd readInputFileAsVectors(string inputVectorsFilename);
 // // Read file as matrix
 Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename, int stopCount, int lineToSkip);
 
-// // Extract filename
-string extractFilename(string filename);
-
-// // Random Value
-double fRand(double min, double max);
-
 // Main Function
 // TODO: commandline arguments and default values right now inputs are hard
 // coded
+// TODO: Need to convert from munzir to dart format before passing it through
+// dart methods
 int main() {
     // TODO: Command line flags and arguments
     // TODO: Default values
@@ -73,7 +71,7 @@ int main() {
     //srand(0);
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangCollision.urdf";
 
     //INPUT on below line (fixed wheel robot path)
     string fixedWheelRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/KrangFixedWheels/krang_fixed_wheel.urdf";
@@ -244,17 +242,15 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
                                  0, 0,  -1.57, 0,  -1.57, 0};
 
     int totalPoses = 3 * 4 * 4 * 4 * 3 * 3;
-    Eigen::MatrixXd outputPoses(totalPoses, 25);
+    Eigen::MatrixXd outputPoses(totalPoses, 23);
 
-    double a = 0; //axis angle 1
-    double b = 0; //axis angle 2
-    double c = 0; //axis angle 3
-    double d = 0; //x
-    double e = 0; //y
-    double f = 0; //z
-    double g = 0; //qLWheel
-    double h = 0; //qRWheel
-    double k = 0; //qKinect
+    double a = 0; //heading
+    double b = 0; //qBase
+    double c = 0.264; //x
+    double d = 0; //y
+    double e = 0; //z
+    double f = 0; //qLWheel
+    double g = 0; //qRWheel
 
     // Instantiate full robot
     DartLoader loader;
@@ -265,16 +261,16 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
         SkeletonPtr fixedWheelRobot = loader.parseSkeleton(fixedWheelRobotPath);
     }
 
-    Eigen::MatrixXd customPoseParams(25, 1);
+    Eigen::MatrixXd customPoseParams(23, 1);
 
     int poseCounter = 0;
     int totalPoseCounter = 0;
     cout << "Written Pose: " << poseCounter << " Filtered Pose: " << totalPoseCounter << "/" << totalPoses;
 
-    for (double i = lowerLimit[0] ; i <= upperLimit[0];  i += (upperLimit[0]  - lowerLimit[0] ) / step[0] ) {
-    for (double j = lowerLimit[1] ; j <= upperLimit[1];  j += (upperLimit[1]  - lowerLimit[1] ) / step[1] ) {
-    for (double l = lowerLimit[2] ; l <= upperLimit[2];  l += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
-    for (double s = lowerLimit[9] ; s <= upperLimit[9];  s += (upperLimit[9]  - lowerLimit[9] ) / step[3] ) {
+    for (double h = lowerLimit[0] ; h <= upperLimit[0];  h += (upperLimit[0]  - lowerLimit[0] ) / step[0] ) {
+    for (double i = lowerLimit[1] ; i <= upperLimit[1];  i += (upperLimit[1]  - lowerLimit[1] ) / step[1] ) {
+    for (double j = lowerLimit[2] ; j <= upperLimit[2];  j += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
+    for (double q = lowerLimit[9] ; q <= upperLimit[9];  q += (upperLimit[9]  - lowerLimit[9] ) / step[3] ) {
     for (int armPoseL = 0; armPoseL < armPoses; armPoseL++) {
     for (int armPoseR = 0; armPoseR < armPoses; armPoseR++) {
 
@@ -288,19 +284,17 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
         customPoseParams(6, 0) = g;
         customPoseParams(7, 0) = h;
         customPoseParams(8, 0) = i;
-        customPoseParams(9, 0) = j;
-        customPoseParams(10, 0) = k;
 
         // Write left arm values (shoulder first)
-        customPoseParams(11, 0) = l;
-        int index = 12;
+        customPoseParams(11, 0) = j;
+        int index = 9;
         for (int ii = 0; ii < 6; ii++) {
             customPoseParams(index, 0) = armPoseLArr[armPoseL*numArmValues+ii];
             index++;
         }
 
         // Write right arm values (shoulder first)
-        customPoseParams(index, 0) = s;
+        customPoseParams(index, 0) = q;
         index++;
         for (int ii = 0; ii < 6; ii++) {
             customPoseParams(index, 0) = armPoseRArr[armPoseR*numArmValues+ii];
@@ -312,12 +306,12 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
         try {
             Eigen::MatrixXd balPoseParams = balanceAndCollision(customPoseParams, fullRobot, fixedWheelRobot, balance, tolerance, collisionCheck);
             outputPoses.row(poseCounter) = balPoseParams;
-            ++poseCounter;
+            poseCounter++;
         } catch (exception& e) {
             // Continue without adding that pose
         }
 
-        ++totalPoseCounter;
+        totalPoseCounter++;
         cout << "\rWritten Pose: " << poseCounter << " Filtered Pose: " << totalPoseCounter << "/" << totalPoses;
 
     }}}}}}
@@ -327,20 +321,20 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
     Eigen::MatrixXd finalOutputPoses = outputPoses.topRows(poseCounter);
     return finalOutputPoses;
 }
+
 // TODO: Add in the input file with step/limit vectors
+// TODO: (determine if step/limit vectors are feasible if not then exit program)
 Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath, string inputVectorsFilename) {
     // What we change: qWaist, qTorso, qLArm0, ... qLArm6, qRArm0, ..., qRArm6
-    // i, j, l, m, n, o, p, q, r, s, t, u, v, w, x, y
+    // h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w
     // What we keep same
-    double a = 0; //axis-angle1
-    double b = 0; //axis-angle2
-    double c = 0; //axis-angle3
-    double d = 0; //x
-    double e = 0; //y
-    double f = 0; //z
-    double g = 0; //qLWheel
-    double h = 0; //qRWheel
-    double k = 0; //qKinect
+    double a = 0; //heading
+    double b = 0; //qBase
+    double c = 0.264; //x
+    double d = 0; //y
+    double e = 0; //z
+    double f = 0; //qLWheel
+    double g = 0; //qRWheel
 
     // TODO: get from another method
     //double lowerLimit[] = {0, -1.57, -pi, -bendLimit, -pi, -bendLimit, -pi, -bendLimit, -pi, -pi, -bendLimit, -pi, -bendLimit, -pi, -bendLimit, -pi};
@@ -353,9 +347,9 @@ Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen:
     for (int index = 0; index < stepArrSize; index++) {
         totalPoses = totalPoses * (step[index] + 1);
     }
-    Eigen::MatrixXd outputPoses(totalPoses, 25);
+    Eigen::MatrixXd outputPoses(totalPoses, 23);
 
-    Eigen::MatrixXd stepPoseParams(25, 1);
+    Eigen::MatrixXd stepPoseParams(23, 1);
 
     // Instantiate full robot
     DartLoader loader;
@@ -370,24 +364,24 @@ Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen:
     int totalPoseCounter = 0;
     cout << "Written Pose: " << poseCounter << " Filtered Pose: " << totalPoseCounter << "/" << totalPoses;
 
-    for (double i = lowerLimit[0] ; i <= upperLimit[0];  i += (upperLimit[0]  - lowerLimit[0] ) / step[0] ) {
-    for (double j = lowerLimit[1] ; j <= upperLimit[1];  j += (upperLimit[1]  - lowerLimit[1] ) / step[1] ) {
-    for (double l = lowerLimit[2] ; l <= upperLimit[2];  l += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
-    for (double m = lowerLimit[3] ; m <= upperLimit[3];  m += (upperLimit[3]  - lowerLimit[3] ) / step[3] ) {
-    for (double n = lowerLimit[4] ; n <= upperLimit[4];  n += (upperLimit[4]  - lowerLimit[4] ) / step[4] ) {
-    for (double o = lowerLimit[5] ; o <= upperLimit[5];  o += (upperLimit[5]  - lowerLimit[5] ) / step[5] ) {
-    for (double p = lowerLimit[6] ; p <= upperLimit[6];  p += (upperLimit[6]  - lowerLimit[6] ) / step[6] ) {
-    for (double q = lowerLimit[7] ; q <= upperLimit[7];  q += (upperLimit[7]  - lowerLimit[7] ) / step[7] ) {
-    for (double r = lowerLimit[8] ; r <= upperLimit[8];  r += (upperLimit[8]  - lowerLimit[8] ) / step[8] ) {
-    for (double s = lowerLimit[9] ; s <= upperLimit[9];  s += (upperLimit[9]  - lowerLimit[9] ) / step[9] ) {
-    for (double t = lowerLimit[10]; t <= upperLimit[10]; t += (upperLimit[10] - lowerLimit[10]) / step[10]) {
-    for (double u = lowerLimit[11]; u <= upperLimit[11]; u += (upperLimit[11] - lowerLimit[11]) / step[11]) {
-    for (double v = lowerLimit[12]; v <= upperLimit[12]; v += (upperLimit[12] - lowerLimit[12]) / step[12]) {
-    for (double w = lowerLimit[13]; w <= upperLimit[13]; w += (upperLimit[13] - lowerLimit[13]) / step[13]) {
-    for (double x = lowerLimit[14]; x <= upperLimit[14]; x += (upperLimit[14] - lowerLimit[14]) / step[14]) {
-    for (double y = lowerLimit[15]; y <= upperLimit[15]; y += (upperLimit[15] - lowerLimit[15]) / step[15]) {
+    for (double h = lowerLimit[0] ; h <= upperLimit[0];  h += (upperLimit[0]  - lowerLimit[0] ) / step[0] ) {
+    for (double i = lowerLimit[1] ; i <= upperLimit[1];  i += (upperLimit[1]  - lowerLimit[1] ) / step[1] ) {
+    for (double j = lowerLimit[2] ; j <= upperLimit[2];  j += (upperLimit[2]  - lowerLimit[2] ) / step[2] ) {
+    for (double k = lowerLimit[3] ; k <= upperLimit[3];  k += (upperLimit[3]  - lowerLimit[3] ) / step[3] ) {
+    for (double l = lowerLimit[4] ; l <= upperLimit[4];  l += (upperLimit[4]  - lowerLimit[4] ) / step[4] ) {
+    for (double m = lowerLimit[5] ; m <= upperLimit[5];  m += (upperLimit[5]  - lowerLimit[5] ) / step[5] ) {
+    for (double n = lowerLimit[6] ; n <= upperLimit[6];  n += (upperLimit[6]  - lowerLimit[6] ) / step[6] ) {
+    for (double o = lowerLimit[7] ; o <= upperLimit[7];  o += (upperLimit[7]  - lowerLimit[7] ) / step[7] ) {
+    for (double p = lowerLimit[8] ; p <= upperLimit[8];  p += (upperLimit[8]  - lowerLimit[8] ) / step[8] ) {
+    for (double q = lowerLimit[9] ; q <= upperLimit[9];  q += (upperLimit[9]  - lowerLimit[9] ) / step[9] ) {
+    for (double r = lowerLimit[10]; r <= upperLimit[10]; r += (upperLimit[10] - lowerLimit[10]) / step[10]) {
+    for (double s = lowerLimit[11]; s <= upperLimit[11]; s += (upperLimit[11] - lowerLimit[11]) / step[11]) {
+    for (double t = lowerLimit[12]; t <= upperLimit[12]; t += (upperLimit[12] - lowerLimit[12]) / step[12]) {
+    for (double u = lowerLimit[13]; u <= upperLimit[13]; u += (upperLimit[13] - lowerLimit[13]) / step[13]) {
+    for (double v = lowerLimit[14]; u <= upperLimit[14]; u += (upperLimit[14] - lowerLimit[14]) / step[14]) {
+    for (double w = lowerLimit[15]; u <= upperLimit[15]; u += (upperLimit[15] - lowerLimit[15]) / step[15]) {
 
-        stepPoseParams << a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y;
+        stepPoseParams << a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w;
 
         // Run it through balancing and collision check, if it passes then add
         // it to final output
@@ -399,7 +393,7 @@ Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen:
             // Continue without adding that pose
         }
 
-        ++totalPoseCounter;
+        totalPoseCounter++;
         cout << "\rWritten Pose: " << poseCounter << " Filtered Pose: " << totalPoseCounter << "/" << totalPoses;
 
     }}}}}}}}}}}}}}}}
@@ -426,7 +420,7 @@ Eigen::MatrixXd genFilterPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
     int numInputPoses = unfilteredPoses.rows();
 
     // Output matrix
-    Eigen::MatrixXd outputPoses(numInputPoses, 25);
+    Eigen::MatrixXd outputPoses(numInputPoses, 23);
 
     // Instantiate full robot
     DartLoader loader;
@@ -455,7 +449,7 @@ Eigen::MatrixXd genFilterPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
             // Continue without adding that pose
         }
 
-        ++totalPoseCounter;
+        totalPoseCounter++;
         cout << "\rWritten Pose: " << poseCounter << " Filtered Pose: " << totalPoseCounter << "/" << numInputPoses;
     }
 
@@ -465,17 +459,15 @@ Eigen::MatrixXd genFilterPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
 }
 
 Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen::MatrixXd unBalPose), double tolerance, bool collisionCheck, string fullRobotPath, string fixedWheelRobotPath, int numPoses) {
-    Eigen::MatrixXd outputPoses(numPoses, 25);
+    Eigen::MatrixXd outputPoses(numPoses, 23);
 
-    double a = 0; //axis-angle1
-    double b = 0; //axis-angle2
-    double c = 0; //axis-angle3
-    double d = 0; //x
-    double e = 0; //y
-    double f = 0; //z
-    double g = 0; //qLWheel
-    double h = 0; //qRWheel
-    double k = 0; //qKinect
+    double a = 0; //heading
+    double b = 0; //qBase
+    double c = 0.264; //x
+    double d = 0; //y
+    double e = 0; //z
+    double f = 0; //qLWheel
+    double g = 0; //qRWheel
 
     // Instantiate full robot
     DartLoader loader;
@@ -492,7 +484,7 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
     while (poseCounter < numPoses) {
 
         // Create random pose vector
-        Eigen::MatrixXd randomPoseParams(25, 1);
+        Eigen::MatrixXd randomPoseParams(23, 1);
 
         // Add the default values first
         randomPoseParams(0, 0) = a;
@@ -502,24 +494,13 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
         randomPoseParams(4, 0) = e;
         randomPoseParams(5, 0) = f;
         randomPoseParams(6, 0) = g;
-        randomPoseParams(7, 0) = h;
 
-        int index = 8;
+        int index = 7;
 
         // Loop through adding the rest of the values (qWaist, qTorso)
         int ii = 0;
-        for (;ii < 2; ii++) {
-            double ard = fRand(lowerLimit[ii], upperLimit[ii]);
-            randomPoseParams(index, 0) = ard;
-            index++;
-        }
-
-        // Add qKinect
-        randomPoseParams(index, 0) = k;
-        index++;
-
-        // Add the rest of the values (qArms)
-        for (;ii < sizeof(lowerLimit)/sizeof(lowerLimit[0]); ii++) {
+        cout << sizeof(lowerLimit)/sizeof(lowerLimit[0]) << endl;
+        for (int ii = 0; ii < sizeof(lowerLimit)/sizeof(lowerLimit[0]); ii++) {
             double ard = fRand(lowerLimit[ii], upperLimit[ii]);
             randomPoseParams(index, 0) = ard;
             index++;
@@ -535,87 +516,11 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
             // Continue without adding that pose
         }
 
-        ++totalPoseCounter;
+        totalPoseCounter++;
         cout << "\rWritten Pose: " << poseCounter << "/" << numPoses << " Filtered Pose: " << totalPoseCounter;
     }
 
     cout << endl;
 
     return outputPoses;
-}
-
-// // Random Value
-double fRand(double fMin, double fMax) {
-    double f = (double)rand() / RAND_MAX;
-    return fMin + f * (fMax - fMin);
-}
-
-// // Read file for step/limit vectors
-// TODO: (determine if vectors are feasible if not then exit program)
-Eigen::MatrixXd readInputFileAsVectors(string inputVectorsFilename) {
-    return readInputFileAsMatrix(inputVectorsFilename, INT_MAX, 1);
-}
-
-// // Read file as Matrix
-Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename, int stopCount, int lineToSkip) {
-    // Read numbers (the pose params)
-    ifstream infile;
-    infile.open(inputPosesFilename);
-
-    if (!infile.is_open()) {
-        throw runtime_error(inputPosesFilename + " can not be read, potentially does not exist!");
-    }
-
-    int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
-
-    int lineNumber = 1;
-    while(! infile.eof() && rows <= stopCount) {
-        if (lineNumber == lineToSkip) {
-            string line;
-            getline(infile, line);
-
-            int temp_cols = 0;
-            stringstream stream(line);
-            while(! stream.eof())
-                stream >> buff[cols*rows+temp_cols++];
-            if (temp_cols == 0)
-                continue;
-
-            if (cols == 0)
-                cols = temp_cols;
-
-            rows++;
-            lineNumber = 0;
-        }
-        lineNumber++;
-    }
-
-    infile.close();
-    rows--;
-
-    // Populate matrix with numbers.
-    Eigen::MatrixXd outputMatrix(rows, cols);
-    for (int i = 0; i < rows; i++)
-        for (int j = 0; j < cols; j++)
-            outputMatrix(i,j) = buff[cols*i+j];
-
-    return outputMatrix;
-}
-
-// // Extract Filename
-string extractFilename(string filename) {
-    // Remove directory if present.
-    // Do this before extension removal incase directory has a period character.
-    const size_t last_slash_idx = filename.find_last_of("\\/");
-    if (std::string::npos != last_slash_idx) {
-        filename.erase(0, last_slash_idx + 1);
-    }
-    // Remove extension if present.
-    const size_t period_idx = filename.rfind('.');
-    if (std::string::npos != period_idx) {
-        filename.erase(period_idx);
-    }
-
-    return filename;
 }

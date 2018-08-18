@@ -16,10 +16,10 @@ gen_poses/*
 !gen_poses/balance_collision.hpp
 
 # convert_pose_formats
-!convert_pose_formats/
-convert_pose_formats/*
-!convert_pose_formats/CMakeLists.txt
-!convert_pose_formats/convert_pose_formats.cpp
+!convert_poses/
+convert_poses/*
+!convert_poses/CMakeLists.txt
+!convert_poses/convert_poses.cpp
 
 # reorient_poses
 !reorient_poses/

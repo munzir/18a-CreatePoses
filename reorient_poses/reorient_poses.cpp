@@ -13,8 +13,9 @@
 // Includes
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
-#include <iostream>
-#include <fstream>
+
+#include "../../18h-Util/convert_pose_formats.hpp"
+#include "../../18h-Util/file_ops.hpp"
 
 // Namespaces
 using namespace std;
@@ -22,9 +23,6 @@ using namespace dart::common;
 using namespace dart::dynamics;
 using namespace dart::math;
 using namespace dart::utils;
-
-// Defines
-#define MAXBUFSIZE ((int) 1e6)
 
 // Function Prototypes
 Eigen::MatrixXd reorientAllPoses(Eigen::MatrixXd inputPoses, string fullRobotPath, string reorientOption);
@@ -35,15 +33,6 @@ Eigen::MatrixXd reorientSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr rob
 // // Reorient a single pose
 Eigen::MatrixXd reorientHeadingSinglePose(Eigen::RowVectorXd inputPose, SkeletonPtr robot);
 
-// // Convert from munzir format back to dart format
-Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose);
-
-// // Read file as matrix
-Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename);
-
-// // Extract filename
-string extractFilename(string filename);
-
 // Main Function
 int main() {
     // TODO: Command line flags and arguments
@@ -53,7 +42,7 @@ int main() {
     string inputPosesFilename = "../finalSet.txt";
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangNoKinect.urdf";
 
     //INPUT on below line (reorientation option)
     string reorientOption = "heading";
@@ -186,85 +175,4 @@ Eigen::MatrixXd reorientHeadingSinglePose(Eigen::RowVectorXd inputPose, Skeleton
 
     Eigen::MatrixXd reorientedPose = munzirToDart(munzirPose);
     return reorientedPose;
-}
-
-Eigen::MatrixXd munzirToDart(Eigen::RowVectorXd munzirPose) {
-    // Convert input
-
-    // Find the pose in DART formats
-    double headingInit = munzirPose(0);
-    double qBaseInit = munzirPose(1);
-    Eigen::Matrix<double, 22, 1> unchangedValues;
-    unchangedValues << munzirPose.segment(2,22).transpose();
-
-    // Calculating the axis angle representation of orientation from headingInit and qBaseInit:
-    // RotX(pi/2)*RotY(-pi/2+headingInit)*RotX(-qBaseInit)
-    Eigen::Transform<double, 3, Eigen::Affine> baseTf = Eigen::Transform<double, 3, Eigen::Affine>::Identity();
-    baseTf.prerotate(Eigen::AngleAxisd(-qBaseInit,Eigen::Vector3d::UnitX())).prerotate(Eigen::AngleAxisd(-M_PI/2+headingInit,Eigen::Vector3d::UnitY())).prerotate(Eigen::AngleAxisd(M_PI/2, Eigen::Vector3d::UnitX()));
-    Eigen::AngleAxisd aa(baseTf.matrix().block<3,3>(0,0));
-
-    // Now compile this data into dartPoseParams
-    Eigen::Matrix<double, 25, 1> dartPose;
-    dartPose << aa.angle()*aa.axis(), unchangedValues;
-
-    return dartPose;
-}
-
-// // Read file as Matrix
-Eigen::MatrixXd readInputFileAsMatrix(string inputPosesFilename) {
-    // Read numbers (the pose params)
-    ifstream infile;
-    infile.open(inputPosesFilename);
-
-    if (!infile.is_open()) {
-        throw runtime_error(inputPosesFilename + " can not be read, potentially does not exit!");
-    }
-
-    int cols = 0, rows = 0;
-    double buff[MAXBUFSIZE];
-
-    while(! infile.eof()) {
-        string line;
-        getline(infile, line);
-
-        int temp_cols = 0;
-        stringstream stream(line);
-        while(! stream.eof())
-            stream >> buff[cols*rows+temp_cols++];
-        if (temp_cols == 0)
-            continue;
-
-        if (cols == 0)
-            cols = temp_cols;
-
-        rows++;
-    }
-
-    infile.close();
-    rows--;
-
-    // Populate matrix with numbers.
-    Eigen::MatrixXd outputMatrix(rows, cols);
-    for (int i = 0; i < rows; i++)
-        for (int j = 0; j < cols; j++)
-            outputMatrix(i,j) = buff[cols*i+j];
-
-    return outputMatrix;
-}
-
-// // Extract Filename
-string extractFilename(string filename) {
-    // Remove directory if present.
-    // Do this before extension removal incase directory has a period character.
-    const size_t last_slash_idx = filename.find_last_of("\\/");
-    if (std::string::npos != last_slash_idx) {
-        filename.erase(0, last_slash_idx + 1);
-    }
-    // Remove extension if present.
-    const size_t period_idx = filename.rfind('.');
-    if (std::string::npos != period_idx) {
-        filename.erase(period_idx);
-    }
-
-    return filename;
 }
