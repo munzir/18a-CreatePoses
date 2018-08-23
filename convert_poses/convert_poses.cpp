@@ -41,7 +41,7 @@ int main() {
     string inputPosesFilename = "./hardware-balanced-posesmunzirdartmunzir.txt";
 
     //INPUT on below line (full robot path)
-    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangNoKinect.urdf";
+    string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/Krang.urdf";
 
     // Read input file
     Eigen::MatrixXd inputPoses;

@@ -10,9 +10,9 @@
 // Includes
 #include <dart/dart.hpp>
 #include <dart/utils/urdf/urdf.hpp>
-#include <nlopt.hpp>
 
-#include "balance_collision.hpp"
+#include "../../18h-Util/balance.hpp"
+#include "../../18h-Util/collision.hpp"
 #include "../../18h-Util/convert_pose_formats.hpp"
 #include "../../18h-Util/file_ops.hpp"
 #include "../../18h-Util/random.hpp"
@@ -67,8 +67,8 @@ int main() {
     // Default genMethod = random
 
     // Set random seed
-    srand(time(0));
-    //srand(0);
+    //srand(time(0));
+    srand(0);
 
     //INPUT on below line (full robot path)
     string fullRobotPath = "/home/apatel435/Desktop/WholeBodyControlAttempt1/09-URDF/Krang/KrangCollision.urdf";
@@ -81,8 +81,8 @@ int main() {
     // Options: custom2com, step, filter, random
 
     //INPUT on below lilne (balancing method)
-    string balMethod = "full";
-    // Options: none, full, fixedwheel
+    string balMethod = "angle";
+    // Options: none, full, fixedwheel, angle
 
     //INPUT on below line (tolerance level (in meters) for xCOM value from opt code)
     double tolerance = defTolerance;
@@ -90,6 +90,7 @@ int main() {
 
     //INPUT on below line (check for collision)
     bool collisionCheck = true;
+    //bool collisionCheck = false;
 
     //Step Only
     //INPUT on below line (input file for step/limit vectors)
@@ -107,13 +108,13 @@ int main() {
 
     //Random Only
     //INPUT on below line (number of poses to generate)
-    int numPoses = 2000;
-    //int numPoses = 50;
+    int numPoses = 20000;
+    //int numPoses = 10;
 
     // Name output file
     string outfilename;
 
-    if (balMethod != "none" && balMethod != "fixedwheel") {
+    if (balMethod != "none" && balMethod != "fixedwheel" && balMethod != "angle") {
         balMethod = "full";
     }
     if (balMethod == "none") {
@@ -148,6 +149,8 @@ int main() {
             outputPoses = genCustom2ComPoses(doNotBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath);
         } else if (balMethod == "fixedwheel") {
             outputPoses = genCustom2ComPoses(fixedWheelBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath);
+        } else if (balMethod == "angle") {
+            outputPoses = genCustom2ComPoses(angleBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath);
         } else {
             // Default to full balance
             outputPoses = genCustom2ComPoses(fullBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath);
@@ -160,6 +163,8 @@ int main() {
             outputPoses = genStepPoses(doNotBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputVectorsFilename);
         } else if (balMethod == "fixedwheel") {
             outputPoses = genStepPoses(fixedWheelBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputVectorsFilename);
+        } else if (balMethod == "angle") {
+            outputPoses = genStepPoses(angleBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputVectorsFilename);
         } else {
             // Default to Full Balance
             outputPoses = genStepPoses(fullBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputVectorsFilename);
@@ -172,6 +177,8 @@ int main() {
             outputPoses = genFilterPoses(doNotBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputPosesFilename, stopCount, lineToSkip);
         } else if (balMethod == "fixedwheel") {
             outputPoses = genFilterPoses(fixedWheelBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputPosesFilename, stopCount, lineToSkip);
+        } else if (balMethod == "angle") {
+            outputPoses = genFilterPoses(angleBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputPosesFilename, stopCount, lineToSkip);
         } else {
             // Default to Full Balance
             outputPoses = genFilterPoses(fullBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, inputPosesFilename, stopCount, lineToSkip);
@@ -185,6 +192,11 @@ int main() {
             outputPoses = genRandomPoses(doNotBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, numPoses);
         } else if (balMethod == "fixedwheel") {
             outputPoses = genRandomPoses(fixedWheelBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, numPoses);
+        } else if (balMethod == "angle") {
+            // Best balancing method
+            // Efficiency rate seems to be 45348:20000 // 2.3:1
+            // Took 2 mins
+            outputPoses = genRandomPoses(angleBalancePose, tolerance, collisionCheck, fullRobotPath, fixedWheelRobotPath, numPoses);
         } else {
             // Default to Full Balance
             // Efficiency rate seems to be 75:1 // 5000:66
@@ -246,9 +258,9 @@ Eigen::MatrixXd genCustom2ComPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, 
 
     double a = 0; //heading
     double b = 0; //qBase
-    double c = 0.264; //x
+    double c = 0; //x
     double d = 0; //y
-    double e = 0; //z
+    double e = 0.264; //z
     double f = 0; //qLWheel
     double g = 0; //qRWheel
 
@@ -330,9 +342,9 @@ Eigen::MatrixXd genStepPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eigen:
     // What we keep same
     double a = 0; //heading
     double b = 0; //qBase
-    double c = 0.264; //x
+    double c = 0; //x
     double d = 0; //y
-    double e = 0; //z
+    double e = 0.264; //z
     double f = 0; //qLWheel
     double g = 0; //qRWheel
 
@@ -463,9 +475,9 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
 
     double a = 0; //heading
     double b = 0; //qBase
-    double c = 0.264; //x
+    double c = 0; //x
     double d = 0; //y
-    double e = 0; //z
+    double e = 0.264; //z
     double f = 0; //qLWheel
     double g = 0; //qRWheel
 
@@ -499,7 +511,6 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
 
         // Loop through adding the rest of the values (qWaist, qTorso)
         int ii = 0;
-        cout << sizeof(lowerLimit)/sizeof(lowerLimit[0]) << endl;
         for (int ii = 0; ii < sizeof(lowerLimit)/sizeof(lowerLimit[0]); ii++) {
             double ard = fRand(lowerLimit[ii], upperLimit[ii]);
             randomPoseParams(index, 0) = ard;
@@ -511,9 +522,10 @@ Eigen::MatrixXd genRandomPoses(Eigen::MatrixXd(*balance)(SkeletonPtr robot, Eige
         try {
             Eigen::MatrixXd balPoseParams = balanceAndCollision(randomPoseParams, fullRobot, fixedWheelRobot, balance, tolerance, collisionCheck);
             outputPoses.row(poseCounter) = balPoseParams;
-            ++poseCounter;
+            poseCounter++;
         } catch (exception& e) {
             // Continue without adding that pose
+            //cout << endl << e.what() << endl;
         }
 
         totalPoseCounter++;
